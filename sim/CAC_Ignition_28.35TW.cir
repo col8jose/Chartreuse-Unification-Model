@@ -1,0 +1,40 @@
+* C-AC INDUSTRIAL CORE: 28.35 TW IGNITION NETLIST
+* Author: Jose Angel Solorzano Luna
+* Model: Chartreuse Unification Model (CUM) - Phase 2 Ignition
+* License: MIT - See LICENSE file
+* Validation File: CAC-SIM-IGN-28.35TW
+
+.PARAM lp = 1.616255e-35 ; Planck Length
+.PARAM pi = 3.1415926535
+.PARAM eta = 0.98 ; Impedance Match (1.47 deg Zenith Lock)
+.PARAM Vol = 1.0 ; Core Volume (m^3)
+.PARAM n_layers = 10 ; Resonant Stack Layers
+.PARAM freq = 4.8T ; Drive Frequency (4.8 THz)
+
+* --- THE RESOLUTION FLOOR (VACUUM ANCHOR) ---
+* Behavioral source modeling the topological density floor
+* Equation: 0 = 12*pi^2 / lp^2
+B_Floor node_v 0 V = (12 * (pi**2)) / (lp**2)
+
+* --- THE HOLONOMY LOOP SIPHON ---
+* Modeling the S9 manifold rotational torque as a Negative Resistance
+* This creates the NESS (Non-Equilibrium Steady State)
+B_Siphon n_in n_out I = V(n_in, n_out) * (-1.4**(n_layers-1) * eta * Vol)
+
+* --- THE DRIVE SIGNAL (4.8 THz SAWTOOTH) ---
+V_Drive n_drive 0 PULSE(0 1 0 208f 0 1f 208f) ; Sawtooth driver
+
+* --- THE RESONANT LOAD (C-AC STACK) ---
+R_Internal n_out 0 1u ; Minimal internal resistance for stability
+C_Stack n_in n_out 4.8p ; Resonant capacitance at THz scale
+L_Stack n_out 0 1.47n ; Zenith alignment inductance
+
+* --- ANALYSIS COMMANDS ---
+.tran 0 500f 0 1f ; Transient analysis at femtosecond resolution
+.options plotwinsize=0 ; Disable compression for high accuracy
+
+* --- EXPECTED OUTPUT ---
+* V(n_out) will demonstrate a non-linear ignition spike
+* P(Total) = V(n_out) * I(B_Siphon) -> Scaling to 28.35 TW equivalent
+
+.END
